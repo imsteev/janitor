@@ -1,15 +1,15 @@
 # janitor
 
-To install dependencies:
+This project was created using `bun init` in bun v1.2.17. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+
+Install dependencies:
 
 ```bash
 bun install
 ```
 
-To run:
+Install crontab (only tested on MacOS):
 
 ```bash
-bun run index.ts
+bun setup
 ```
-
-This project was created using `bun init` in bun v1.2.17. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

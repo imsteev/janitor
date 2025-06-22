@@ -3,40 +3,64 @@ import { readdir, stat, rename, mkdir, exists } from "fs/promises";
 import { Stats } from "fs";
 
 interface JanitorFile {
-  name: string;
-  path: string;
+  name: string; // slug
+  path: string; // full path
   stats: Stats;
 }
 
 export class Janitor {
-  public readonly archivePath: string;
-
   constructor(
     /**
      * The path to the directory to scan for files.
      */
-    public readonly basePath: string,
+    public readonly baseDirectory: string,
     /**
-     * The patterns to match against the file names.
+     * The patterns to match against the file names in @basePath.
      */
-    public readonly patterns: RegExp[]
+    public readonly patterns: RegExp[],
+    /**
+     * The path to the directory where files will be moved to.
+     */
+    public readonly archiveDirectory: string = ""
   ) {
-    this.archivePath = join(this.basePath, "janitor-archive");
+    this.archiveDirectory =
+      archiveDirectory || join(this.baseDirectory, "janitor-archive");
+  }
+  async archive({ olderThanMs }: { olderThanMs: number }): Promise<number> {
+    const allFiles = await this.scan(this.baseDirectory);
+
+    const filesToArchive = allFiles.filter((file) => {
+      return file.stats.mtime.getTime() < Date.now() - olderThanMs;
+    });
+
+    if (filesToArchive.length === 0) {
+      return 0;
+    }
+
+    if (!(await exists(this.archiveDirectory))) {
+      await mkdir(this.archiveDirectory, { recursive: true });
+    }
+
+    const archiveEntry = await this.createArchiveEntry();
+
+    for (const file of filesToArchive) {
+      const destinationPath = join(archiveEntry, file.name);
+      await rename(file.path, destinationPath);
+    }
+
+    return filesToArchive.length;
   }
 
-  async scan(): Promise<JanitorFile[]> {
+  // scans a directory for files that match @patterns
+  private async scan(dir: string): Promise<JanitorFile[]> {
     const files: JanitorFile[] = [];
 
-    const baseFiles = await readdir(this.basePath);
-
-    for (const file of baseFiles) {
-      if (this.patterns.some((pattern) => pattern.test(file))) {
-        const filePath = join(this.basePath, file);
-        const stats = await stat(filePath);
+    for (const fileName of await readdir(dir)) {
+      if (this.patterns.some((pattern) => pattern.test(fileName))) {
         files.push({
-          name: file,
-          path: filePath,
-          stats,
+          name: fileName,
+          path: join(dir, fileName),
+          stats: await stat(join(dir, fileName)),
         });
       }
     }
@@ -44,31 +68,11 @@ export class Janitor {
     return files;
   }
 
-  async archive(files: JanitorFile[]): Promise<void> {
-    if (files.length === 0) {
-      return;
-    }
-
-    if (!(await exists(this.archivePath))) {
-      await mkdir(this.archivePath, { recursive: true });
-    }
-
-    const archiveEntry = await this.createArchiveEntry();
-
-    for (const file of files) {
-      const destinationPath = join(archiveEntry, file.name);
-      await rename(file.path, destinationPath);
-    }
-  }
-
   private async createArchiveEntry(): Promise<string> {
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19); // Format: 2025-01-21T10-30-45
-    const archiveFolder = join(this.archivePath, timestamp);
-
-    // Create timestamped subdirectory
+    const archiveFolder = join(this.archiveDirectory, timestamp);
     await mkdir(archiveFolder, { recursive: true });
-
     return archiveFolder;
   }
 }

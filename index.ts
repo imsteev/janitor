@@ -1,32 +1,38 @@
+import { config } from "./config";
+import { duration } from "./lib/constants";
 import { Janitor } from "./lib/janitor";
 import { join } from "path";
 
 async function main(): Promise<void> {
-  const desktopPath = join(process.env.HOME || "", "Desktop");
+  const baseDirectory = join(process.env.HOME || "", "Desktop");
+  const archiveDirectory = join(
+    process.env.HOME || "",
+    "Desktop",
+    "janitor-archive"
+  );
   const patterns = [
-    // Apparently screenshot names on MacOS have non-standard whitespace characters (like \u202F, a non-breaking space)
+    // E.g, matches "Screenshot 2025-06-22 at 5.15.40 PM"
+    // Screenshot names on MacOS have non-standard whitespace characters (like \u202F, a non-breaking space)
     /^Screenshot \d{4}-\d{2}-\d{2} at \d{1,2}\.\d{2}\.\d{2}[\u00A0\u202F]?(AM|PM)/i,
   ];
 
-  const janitor = new Janitor(desktopPath, patterns);
-  const files = await janitor.scan();
+  const janitor = new Janitor(baseDirectory, patterns, archiveDirectory);
 
-  const oldFiles = files.filter((file) => isOlderThanOneDay(file.stats.mtime));
-  if (oldFiles.length > 0) {
-    await janitor.archive(oldFiles);
-    console.log(`Archived ${oldFiles.length} file(s).`);
+  const numArchived = await janitor.archive({
+    olderThanMs: config.screenshotThresholdMs,
+  });
+
+  if (numArchived > 0) {
+    console.log(`Archived ${numArchived} file(s).`);
   } else {
-    console.log("No files older than 24 hours found.");
+    console.log(
+      `No files older than ${
+        config.screenshotThresholdMs / duration.OneMinute.ms
+      }${duration.OneMinute.name} found.`
+    );
   }
 }
 
-// Run the script
 if (import.meta.main) {
   main().catch(console.error);
-}
-
-function isOlderThanOneDay(date: Date): boolean {
-  const oneDayAgo = new Date();
-  oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-  return date < oneDayAgo;
 }
