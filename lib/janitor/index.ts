@@ -1,5 +1,5 @@
 import { join } from "path";
-import { readdir, stat, rename, mkdir, exists } from "fs/promises";
+import { readdir, rename, mkdir, exists } from "fs/promises";
 
 export class Janitor {
   constructor(
