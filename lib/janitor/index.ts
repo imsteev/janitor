@@ -69,7 +69,10 @@ export class Janitor {
   }
 
   private async createArchiveEntry(): Promise<string> {
-    const archiveFolder = join(this.archiveDirectory, new Date().toISOString());
+    const archiveFolder = join(
+      this.archiveDirectory,
+      new Date().toISOString().replaceAll(":", ".")
+    );
     await mkdir(archiveFolder, { recursive: true });
     return archiveFolder;
   }
