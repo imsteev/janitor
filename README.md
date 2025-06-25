@@ -13,3 +13,6 @@ Install crontab (only tested on MacOS):
 ```bash
 bun setup
 ```
+
+See configuration options in `config.example.ts`.
+`janitor` will read from `config.ts`, so if you want to customize things you can make changes there and re-run the setup command.
