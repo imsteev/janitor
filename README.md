@@ -11,7 +11,7 @@ bun install
 Install crontab (only tested on MacOS):
 
 ```bash
-bun setup
+bun setup  # will create a config.ts file if it does not exist
 ```
 
 See configuration options in `config.example.ts`.
